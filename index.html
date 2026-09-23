@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Jogo FPS 3D em ambiente natural com personagens humanos low-poly, usando apenas HTML, CSS e JavaScript puro.">
+  <title>VALLEY COMBAT - FPS 3D</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Teko:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div id="gameContainer">
+    <!-- Canvas Principal do Jogo 3D -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Vinheta de Dano na Tela (Bordas Vermelhas Rápidas) -->
+    <div id="damageVignette" class="vignette"></div>
+
+    <!-- Clarão do Disparo da Arma (Muzzle Flash Overlay) -->
+    <div id="muzzleFlashFx" class="muzzle-flash-overlay"></div>
+
+    <!-- Mira Fixa Central (Crosshair no centro absoluto da tela) -->
+    <div id="crosshairContainer" class="crosshair-fixed">
+      <div id="crosshair" class="crosshair-mark">
+        <span class="ch-line ch-top"></span>
+        <span class="ch-line ch-bottom"></span>
+        <span class="ch-line ch-left"></span>
+        <span class="ch-line ch-right"></span>
+        <span class="ch-center-dot"></span>
+      </div>
+      <div id="hitmarker" class="hitmarker hidden">
+        <span class="hm-blade hm-tl"></span>
+        <span class="hm-blade hm-tr"></span>
+        <span class="hm-blade hm-bl"></span>
+        <span class="hm-blade hm-br"></span>
+      </div>
+    </div>
+
+    <!-- HUD Tática do Jogador -->
+    <div id="hud" class="hud-container hidden">
+      <!-- Barra Superior -->
+      <header class="hud-top">
+        <div class="hud-card wave-card">
+          <span class="hud-label">FASE / ONDA</span>
+          <span id="waveDisplay" class="hud-val hud-accent">ONDA 1</span>
+        </div>
+
+        <div class="hud-card enemies-card">
+          <span class="hud-label">INIMIGOS NO VALE</span>
+          <div class="hud-flex-row">
+            <span class="pulse-indicator"></span>
+            <span id="enemiesLeftDisplay" class="hud-val hud-red">0</span>
+          </div>
+        </div>
+
+        <div class="hud-card score-card">
+          <span class="hud-label">PONTUAÇÃO</span>
+          <span id="scoreDisplay" class="hud-val hud-gold">000000</span>
+        </div>
+
+        <!-- Radar / Minimapa do Terreno -->
+        <div class="minimap-wrapper">
+          <canvas id="minimapCanvas" width="124" height="124"></canvas>
+          <span class="minimap-tag">MAPA DO TERRENO</span>
+        </div>
+      </header>
+
+      <!-- Indicador Flutuante de Recarga -->
+      <div id="reloadIndicator" class="reload-banner hidden">
+        <div class="reload-wheel"></div>
+        <span>RECARREGANDO... (R)</span>
+      </div>
+
+      <!-- Notificações no HUD -->
+      <div id="hudNotice" class="hud-notice hidden"></div>
+
+      <!-- Barra Inferior: Vida e Munição -->
+      <footer class="hud-bottom">
+        <!-- Indicador de Vida -->
+        <div class="hud-card health-card">
+          <div class="health-header">
+            <span class="hud-label">VIDA DO JOGADOR</span>
+            <span id="healthNumber" class="health-percentage">100%</span>
+          </div>
+          <div class="health-track">
+            <div id="healthBarFill" class="health-fill" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <!-- Indicador de Munição -->
+        <div class="hud-card ammo-card">
+          <div class="ammo-header">
+            <span class="hud-label">PISTOLA 9MM</span>
+            <div class="ammo-digits">
+              <span id="currentAmmo" class="ammo-now">12</span>
+              <span class="ammo-separator">/</span>
+              <span id="reserveAmmo" class="ammo-total">48</span>
+            </div>
+          </div>
+          <div id="bulletPips" class="bullet-pips">
+            <!-- Pips de balas geradas dinamicamente -->
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Aviso de Cursor Destravado (Pointer Lock) -->
+    <div id="lockPrompt" class="lock-prompt hidden">
+      <div class="lock-box">
+        <div class="lock-icon">🎯</div>
+        <h3>MIRA PAUSADA</h3>
+        <p>Clique em qualquer lugar da tela para travar o mouse e continuar jogando</p>
+      </div>
+    </div>
+
+    <!-- Tela Inicial / Menu -->
+    <section id="startScreen" class="overlay-screen active">
+      <div class="menu-modal">
+        <div class="menu-badge">FPS 3D NATUREZA & AÇÃO</div>
+        <h1 class="game-title">VALLEY <span class="text-accent">COMBAT</span></h1>
+        <p class="game-desc">Elimine os adversários espalhados pelo vale antes que esgotem sua energia vital.</p>
+
+        <div class="controls-panel">
+          <div class="controls-title">CONTROLES FPS PADRÃO</div>
+          <div class="controls-list">
+            <div class="ctrl-pill">
+              <span class="kbd">W A S D</span>
+              <span class="lbl">Movimentar</span>
+            </div>
+            <div class="ctrl-pill">
+              <span class="kbd">MOUSE</span>
+              <span class="lbl">Olhar / Mirar</span>
+            </div>
+            <div class="ctrl-pill">
+              <span class="kbd">CLIQUE ESQ.</span>
+              <span class="lbl">Atirar</span>
+            </div>
+            <div class="ctrl-pill">
+              <span class="kbd">R</span>
+              <span class="lbl">Recarregar</span>
+            </div>
+            <div class="ctrl-pill">
+              <span class="kbd">ESC / P</span>
+              <span class="lbl">Pausar</span>
+            </div>
+          </div>
+        </div>
+
+        <button id="btnStartGame" class="action-btn" type="button">
+          <span>JOGAR AGORA</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Tela de Pausa -->
+    <section id="pauseScreen" class="overlay-screen hidden">
+      <div class="menu-modal small">
+        <h2 class="section-title">JOGO PAUSADO</h2>
+        <p class="section-desc">Pressione CONTINUAR ou clique na tela para retornar ao combate.</p>
+        <div class="btn-group">
+          <button id="btnResumeGame" class="action-btn" type="button">
+            <span>CONTINUAR</span>
+          </button>
+          <button id="btnRestartFromPause" class="action-btn secondary" type="button">
+            <span>REINICIAR</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tela de Game Over -->
+    <section id="gameOverScreen" class="overlay-screen hidden">
+      <div class="menu-modal fail">
+        <div class="status-tag red">DERROTA</div>
+        <h2 class="game-title red-glow">FIM DE JOGO</h2>
+        <p class="game-desc">Sua vida chegou a zero no vale.</p>
+
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-name">Inimigos Eliminados</span>
+            <span id="finalKills" class="stat-value">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-name">Onda Alcançada</span>
+            <span id="finalWave" class="stat-value">1</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-name">Pontos</span>
+            <span id="finalScore" class="stat-value hud-gold">0</span>
+          </div>
+        </div>
+
+        <button id="btnRestartGame" class="action-btn fail-btn" type="button">
+          <span>JOGAR NOVAMENTE</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Tela de Vitória -->
+    <section id="victoryScreen" class="overlay-screen hidden">
+      <div class="menu-modal win">
+        <div class="status-tag green">ÁREA LIMPA</div>
+        <h2 class="game-title green-glow">VITÓRIA!</h2>
+        <p class="game-desc">Você eliminou todos os inimigos do vale com maestria.</p>
+
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-name">Inimigos Eliminados</span>
+            <span id="victoryKills" class="stat-value">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-name">Precisão</span>
+            <span id="victoryAccuracy" class="stat-value">0%</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-name">Pontuação</span>
+            <span id="victoryScore" class="stat-value hud-gold">0</span>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button id="btnNextWaveEndless" class="action-btn" type="button">
+            <span>PRÓXIMA ONDA (MODO INFINITO)</span>
+          </button>
+          <button id="btnRestartVictory" class="action-btn secondary" type="button">
+            <span>NOVO JOGO</span>
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
